@@ -35,6 +35,7 @@ class UserService extends BaseService implements UserContract
             return $model->fresh($this->relation);
         } catch (Exception $e) {
             DB::rollBack();
+
             return $e;
         }
     }
@@ -58,6 +59,7 @@ class UserService extends BaseService implements UserContract
             return $model->fresh($this->relation);
         } catch (Exception $e) {
             DB::rollBack();
+
             return $e;
         }
     }

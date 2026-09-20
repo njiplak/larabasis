@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function () {
             $loadRoutes = function ($directory, $middleware) {
-                if (!is_dir($directory)) {
+                if (! is_dir($directory)) {
                     return;
                 }
 
