@@ -6,12 +6,12 @@ use App\Contract\Auth\UserAuthContract;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Utils\WebResponse;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Throwable;
 
 class UserAuthController extends Controller
 {
-
     protected UserAuthContract $service;
 
     public function __construct(UserAuthContract $service)
@@ -21,25 +21,34 @@ class UserAuthController extends Controller
 
     public function login()
     {
-        if (Auth::guard('web')->check()) {
-            return redirect(route('backoffice.index'));
-        } else {
-            return Inertia::render('auth/login');
-        }
+        return Inertia::render('auth/login');
     }
-
 
     public function attempt(LoginRequest $request)
     {
-        $payload = $request->validated();
-        $result = $this->service->login($payload);
+        $request->ensureIsNotRateLimited();
+
+        $result = $this->service->login($request->validated());
+
+        if ($result instanceof Throwable) {
+            $request->hitRateLimiter();
+
+            return WebResponse::response($result);
+        }
+
+        $request->clearRateLimiter();
+        $request->session()->regenerate();
 
         return WebResponse::response($result, 'backoffice.index');
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
         $result = $this->service->logout();
-        return WebResponse::response($result, 'auth.login');
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return WebResponse::response($result, 'login');
     }
 }

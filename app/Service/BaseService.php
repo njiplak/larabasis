@@ -4,7 +4,10 @@ namespace App\Service;
 
 use App\Contract\BaseContract;
 use Exception;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -12,24 +15,23 @@ use Spatie\QueryBuilder\QueryBuilder;
 class BaseService implements BaseContract
 {
     protected array $relation = [];
-    protected string|null $guard = null;
-    protected string|null $guardForeignKey = null;
+
+    protected ?string $guard = null;
+
+    protected ?string $guardForeignKey = null;
+
     protected array $fileKeys = [];
+
     protected Model $model;
 
     /**
      * Repositories constructor.
-     *
-     * @param Model $model
      */
     public function __construct(Model $model)
     {
         $this->model = $model;
     }
 
-    /**
-     * @return Model
-     */
     public function build(): Model
     {
         return $this->model;
@@ -37,8 +39,6 @@ class BaseService implements BaseContract
 
     /**
      * Get user id by guard name.
-     *
-     * @return int
      */
     public function userID(): int
     {
@@ -48,111 +48,85 @@ class BaseService implements BaseContract
     /**
      * Get all items from resource.
      *
-     * @param $allowedFilters
-     * @param $allowedSorts
-     * @param bool|null $withPaginate
-     * @return array|Exception|\Illuminate\Contracts\Pagination\LengthAwarePaginator|\Illuminate\Database\Eloquent\Collection|\Illuminate\Support\HigherOrderWhenProxy[]|QueryBuilder[]
+     * Read failures (an unknown filter, an invalid sort) are left to bubble up
+     * so the request fails with a real status code instead of a 200 body.
+     *
+     * @return array|Collection
      */
     public function all(
         $allowedFilters,
         $allowedSorts,
-        bool|null $withPaginate = null,
+        ?bool $withPaginate = null,
         array $relation = [],
-        int $perPage  = 10,
+        int $perPage = 10,
         string $orderColumn = 'id',
         string $orderPosition = 'asc',
         array $conditions = [],
     ) {
-        try {
-            $model = QueryBuilder::for($this->model::class)
-                ->allowedFilters($allowedFilters)
-                ->allowedSorts($allowedSorts)
-                ->with(empty($relation) ? $this->relation : $relation)
-                ->where($conditions)
-                ->when(!is_null($this->guardForeignKey), function ($query) {
-                    $query->where($this->guardForeignKey, $this->userID());
-                })
-                ->orderBy($orderColumn, $orderPosition)
-                ->when(!is_null($this->guardForeignKey), function ($query) {
-                    $query->paginate()->appends(request()->query());
-                });
+        $model = QueryBuilder::for($this->model::class)
+            ->allowedFilters($allowedFilters)
+            ->allowedSorts($allowedSorts)
+            ->with(empty($relation) ? $this->relation : $relation)
+            ->where($conditions)
+            ->when(! is_null($this->guardForeignKey), function ($query) {
+                $query->where($this->guardForeignKey, $this->userID());
+            })
+            ->orderBy($orderColumn, $orderPosition);
 
-            if (is_null($withPaginate)) $withPaginate = config('service-contract.default_paginated');
-            if (!$withPaginate) return $model->get();
-
-            $result = $model->paginate(request()->get('per_page', $perPage))
-                ->appends(request()->query());
-
-            // Calculate the starting order number based on current page and per_page
-            $startOrderNo = ($result->currentPage() - 1) * $result->perPage() + 1;
-
-            // Add order_no to each item
-            $items = collect($result->items())->map(function ($item, $index) use ($startOrderNo) {
-                $item->order_no = $startOrderNo + $index;
-                return $item;
-            })->all();
-
-            return [
-                'items' => $items,
-                'prev_page' => $result->currentPage() > 1 ? $result->currentPage() - 1 : null,
-                'current_page' => $result->currentPage(),
-                'next_page' => $result->hasMorePages() ? $result->currentPage() + 1 : null,
-                'total_page' => $result->lastPage(),
-                'per_page' => $result->perPage(),
-            ];
-        } catch (Exception $e) {
-            return $e;
+        if (is_null($withPaginate)) {
+            $withPaginate = config('service-contract.default_paginated');
         }
+        if (! $withPaginate) {
+            return $model->get();
+        }
+
+        return $this->paginated($model->paginate(request()->get('per_page', $perPage)));
     }
 
     /**
      * Find item by id from resource.
      *
-     * @param mixed $id
-     * @return Exception|\Illuminate\Database\Eloquent\Collection
+     * A missing record throws ModelNotFoundException so the request 404s
+     * instead of rendering a page with an exception in its props.
+     *
+     * @param  mixed  $id
+     * @return Model
+     *
+     * @throws ModelNotFoundException
      */
     public function find($id, array $relation = [])
     {
-        try {
-            return $this->model
-                ->with(empty($relation) ? $this->relation : $relation)
-                ->when(!is_null($this->guardForeignKey), function ($query) {
-                    $query->where($this->guardForeignKey, $this->userID());
-                })
-                ->findOrFail($id);
-        } catch (Exception $e) {;
-            return $e;
-        }
+        return $this->model
+            ->with(empty($relation) ? $this->relation : $relation)
+            ->when(! is_null($this->guardForeignKey), function ($query) {
+                $query->where($this->guardForeignKey, $this->userID());
+            })
+            ->findOrFail($id);
     }
 
     /**
      * Create new item to resource.
      *
-     * @param $payloads
-     * @return Exception|true
+     * @return Model|Exception
      */
     public function create($payloads)
     {
         try {
-            if (!is_null($this->guardForeignKey)) {
+            if (! is_null($this->guardForeignKey)) {
                 $payloads[$this->guardForeignKey] = $this->userID();
             }
 
             DB::beginTransaction();
             $model = $this->model->create($payloads);
 
-            foreach ($this->fileKeys as $fileKey) {
-                $model->addMultipleMediaFromRequest([$fileKey])
-                    ->each(function ($image) use ($fileKey) {
-                        $image->toMediaCollection($fileKey);
-                    });
-            }
+            $this->syncMedia($model);
 
             DB::commit();
 
             return $model->fresh();
         } catch (Exception $e) {
             DB::rollBack();
+
             return $e;
         }
     }
@@ -161,11 +135,13 @@ class BaseService implements BaseContract
     {
         try {
             DB::beginTransaction();
-            $model = $this->model->insert($payloads);
+            $this->model->insert($payloads);
             DB::commit();
+
             return true;
         } catch (Exception $e) {
             DB::rollBack();
+
             return $e;
         }
     }
@@ -173,39 +149,41 @@ class BaseService implements BaseContract
     /**
      * Update item from resource.
      *
-     * @param mixed $id
-     * @param mixed $payloads
-     * @return Exception|\Illuminate\Database\Eloquent\Collection
+     * @param  mixed  $id
+     * @param  mixed  $payloads
+     * @return Model|Exception
+     *
+     * @throws ModelNotFoundException
      */
     public function update($id, $payloads)
     {
         try {
-            if (!is_null($this->guardForeignKey)) {
+            if (! is_null($this->guardForeignKey)) {
                 $payloads[$this->guardForeignKey] = $this->userID();
             }
 
             foreach ($this->fileKeys as $fileKey) {
-                if (isset($payloads[$fileKey])) {
-                    $media[$fileKey] = $payloads[$fileKey];
-                    unset($payloads[$fileKey]);
-                }
+                unset($payloads[$fileKey]);
             }
 
             DB::beginTransaction();
-            $model = $this->model->findOrFail($id);
+            $model = $this->model
+                ->when(! is_null($this->guardForeignKey), function ($query) {
+                    $query->where($this->guardForeignKey, $this->userID());
+                })
+                ->findOrFail($id);
             $model->update($payloads);
 
-            foreach ($this->fileKeys as $fileKey) {
-                $model->addMultipleMediaFromRequest([$fileKey])
-                    ->each(function ($image) use ($fileKey) {
-                        $image->toMediaCollection($fileKey);
-                    });
-            }
+            $this->syncMedia($model);
             DB::commit();
 
-            return $this->model->find($id);
+            return $model->fresh();
+        } catch (ModelNotFoundException $e) {
+            DB::rollBack();
+            throw $e;
         } catch (Exception $e) {
             DB::rollBack();
+
             return $e;
         }
     }
@@ -213,24 +191,29 @@ class BaseService implements BaseContract
     /**
      * Destroy item from resource.
      *
-     * @param $id
-     * @return mixed
+     * @return bool|Exception
+     *
+     * @throws ModelNotFoundException
      */
     public function destroy($id)
     {
         try {
             DB::beginTransaction();
-            $model = $this->model
-                ->when(!is_null($this->guardForeignKey), function ($query) {
+            $deleted = $this->model
+                ->when(! is_null($this->guardForeignKey), function ($query) {
                     $query->where($this->guardForeignKey, $this->userID());
                 })
                 ->findOrFail($id)
                 ->delete();
             DB::commit();
 
-            return $model;
+            return $deleted;
+        } catch (ModelNotFoundException $e) {
+            DB::rollBack();
+            throw $e;
         } catch (Exception $e) {
             DB::rollBack();
+
             return $e;
         }
     }
@@ -238,86 +221,63 @@ class BaseService implements BaseContract
     /**
      * Get items with certain conditions.
      *
-     * @param mixed $conditions
-     * @param mixed $allowedFilters
-     * @param mixed $allowedSorts
-     * @param bool|null $withPaginate
-     * @return mixed
+     * @param  mixed  $conditions
+     * @param  mixed  $allowedFilters
+     * @param  mixed  $allowedSorts
+     * @return array|Collection
      */
     public function getWithCondition(
         $conditions,
         $allowedFilters,
         $allowedSorts,
-        bool|null $withPaginate = null,
+        ?bool $withPaginate = null,
         $relation = [],
         string $orderColumn = 'id',
         string $orderPosition = 'asc',
-        int $perPage  = 10,
-    ){
-        try {
-            $model = QueryBuilder::for($this->model::class);
+        int $perPage = 10,
+    ) {
+        $model = QueryBuilder::for($this->model::class);
 
-            if (is_array($conditions) && isset($conditions[0]) && is_array($conditions[0])) {
-                $model->where($conditions);
-            } else {
-                $model->where(...$conditions);
-            }
-
-            $model->allowedFilters($allowedFilters)
-                ->allowedSorts($allowedSorts)
-                ->with(empty($relation) ? $this->relation : $relation)
-                ->when(!is_null($this->guardForeignKey), function ($query) {
-                    $query->paginate()->appends(request()->query());
-                })
-                ->orderBy($orderColumn, $orderPosition)
-                ->latest();
-
-            if (is_null($withPaginate)) $withPaginate = config('service-contract.default_paginated');
-            if (!$withPaginate) return $model->get();
-
-            $result = $model->paginate($perPage)
-                ->appends(request()->query());
-
-            // Calculate the starting order number based on current page and per_page
-            $startOrderNo = ($result->currentPage() - 1) * $result->perPage() + 1;
-
-            // Add order_no to each item
-            $items = collect($result->items())->map(function ($item, $index) use ($startOrderNo) {
-                $item->order_no = $startOrderNo + $index;
-                return $item;
-            })->all();
-
-            return [
-                'items' => $items,
-                'prev_page' => $result->currentPage() > 1 ? $result->currentPage() - 1 : null,
-                'current_page' => $result->currentPage(),
-                'next_page' => $result->hasMorePages() ? $result->currentPage() + 1 : null,
-                'total_page' => $result->lastPage(),
-                'per_page' => $result->perPage(),
-            ];
-        } catch (Exception $e) {
-            return $e;
+        if (is_array($conditions) && isset($conditions[0]) && is_array($conditions[0])) {
+            $model->where($conditions);
+        } else {
+            $model->where(...$conditions);
         }
+
+        $model->allowedFilters($allowedFilters)
+            ->allowedSorts($allowedSorts)
+            ->with(empty($relation) ? $this->relation : $relation)
+            ->when(! is_null($this->guardForeignKey), function ($query) {
+                $query->where($this->guardForeignKey, $this->userID());
+            })
+            ->orderBy($orderColumn, $orderPosition);
+
+        if (is_null($withPaginate)) {
+            $withPaginate = config('service-contract.default_paginated');
+        }
+        if (! $withPaginate) {
+            return $model->get();
+        }
+
+        return $this->paginated($model->paginate(request()->get('per_page', $perPage)));
     }
 
     /**
      * Update items with certain conditions.
      *
-     * @param $conditions
-     * @param $payloads
-     * @return mixed
+     * @return Model|null|Exception
      */
     public function updateWithCondition($conditions, $payloads)
     {
         try {
             DB::beginTransaction();
-            $model = $this->model->where($conditions);
-            $model->update($payloads);
+            $this->model->where($conditions)->update($payloads);
             DB::commit();
 
-            return $model->first();
+            return $this->model->where($conditions)->first();
         } catch (Exception $e) {
             DB::rollBack();
+
             return $e;
         }
     }
@@ -325,20 +285,29 @@ class BaseService implements BaseContract
     /**
      * Bulk delete items based on an array of IDs.
      *
-     * @param array $ids
-     * @return bool|Exception
+     * @return int|Exception number of deleted rows
      */
     public function bulkDeleteByIds(array $ids)
     {
         try {
             DB::beginTransaction();
 
-            $deleted = $this->model->whereIn('id', $ids)->delete();
+            $deleted = $this->model
+                ->when(! is_null($this->guardForeignKey), function ($query) {
+                    $query->where($this->guardForeignKey, $this->userID());
+                })
+                ->whereIn('id', $ids)
+                ->get()
+                ->each
+                ->delete()
+                ->count();
+
             DB::commit();
 
-            return $deleted > 0;
+            return $deleted;
         } catch (Exception $e) {
             DB::rollBack();
+
             return $e;
         }
     }
@@ -346,28 +315,65 @@ class BaseService implements BaseContract
     /**
      * Bulk update items based on an array of IDs.
      *
-     * @param array $ids
-     * @return bool|Exception
+     * @return int|Exception number of updated rows
      */
-    public function bulkUpdate(array $ids, $params) 
+    public function bulkUpdate(array $ids, $params)
     {
         try {
             DB::beginTransaction();
 
-            $model = $this->model
-                ->when(!is_null($this->guardForeignKey), function ($query) {
+            $updated = $this->model
+                ->when(! is_null($this->guardForeignKey), function ($query) {
                     $query->where($this->guardForeignKey, $this->userID());
                 })
-                ->whereIn('id', $ids);
-
-            $model->update($params);
+                ->whereIn('id', $ids)
+                ->update($params);
 
             DB::commit();
 
-            return $model;
+            return $updated;
         } catch (Exception $e) {
             DB::rollBack();
+
             return $e;
         }
+    }
+
+    /**
+     * Attach uploaded files for every configured media key.
+     */
+    protected function syncMedia(Model $model): void
+    {
+        foreach ($this->fileKeys as $fileKey) {
+            $model->addMultipleMediaFromRequest([$fileKey])
+                ->each(function ($file) use ($fileKey) {
+                    $file->toMediaCollection($fileKey);
+                });
+        }
+    }
+
+    /**
+     * Shape a paginator into the envelope the front-end table expects.
+     */
+    protected function paginated(LengthAwarePaginator $result): array
+    {
+        $result->appends(request()->query());
+
+        $startOrderNo = ($result->currentPage() - 1) * $result->perPage() + 1;
+
+        $items = collect($result->items())->map(function ($item, $index) use ($startOrderNo) {
+            $item->order_no = $startOrderNo + $index;
+
+            return $item;
+        })->all();
+
+        return [
+            'items' => $items,
+            'prev_page' => $result->currentPage() > 1 ? $result->currentPage() - 1 : null,
+            'current_page' => $result->currentPage(),
+            'next_page' => $result->hasMorePages() ? $result->currentPage() + 1 : null,
+            'total_page' => $result->lastPage(),
+            'per_page' => $result->perPage(),
+        ];
     }
 }

@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Setting;
 
 use App\Contract\Setting\PermissionContract;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BulkDeleteRequest;
 use App\Http\Requests\PermissionRequest;
 use App\Utils\WebResponse;
-use Illuminate\Support\Facades\Request;
 use Inertia\Inertia;
+use Spatie\QueryBuilder\AllowedFilter;
 
 class PermissionController extends Controller
 {
@@ -26,11 +27,15 @@ class PermissionController extends Controller
     public function fetch()
     {
         $data = $this->service->all(
-            allowedFilters: [],
-            allowedSorts: [],
+            allowedFilters: [
+                AllowedFilter::partial('name'),
+                AllowedFilter::callback('search', fn ($query, $value) => $query->where('name', 'like', "%{$value}%")),
+            ],
+            allowedSorts: ['id', 'name', 'created_at', 'updated_at'],
             withPaginate: true,
             perPage: request()->get('per_page', 10)
         );
+
         return response()->json($data);
     }
 
@@ -42,32 +47,35 @@ class PermissionController extends Controller
     public function store(PermissionRequest $request)
     {
         $data = $this->service->create($request->validated());
+
         return WebResponse::response($data, 'backoffice.setting.permission.index');
     }
 
     public function show($id)
     {
-        $data = $this->service->find($id);
         return Inertia::render('setting/permission/form', [
-            "permission" => $data
+            'permission' => $this->service->find($id),
         ]);
     }
 
     public function update(PermissionRequest $request, $id)
     {
         $data = $this->service->update($id, $request->validated());
+
         return WebResponse::response($data, 'backoffice.setting.permission.index');
     }
 
     public function destroy($id)
     {
         $data = $this->service->destroy($id);
+
         return WebResponse::response($data, 'backoffice.setting.permission.index');
     }
 
-    public function destroy_bulk(Request $request)
+    public function destroy_bulk(BulkDeleteRequest $request)
     {
-        $data = $this->service->bulkDeleteByIds($request->ids ?? []);
+        $data = $this->service->bulkDeleteByIds($request->ids());
+
         return WebResponse::response($data, 'backoffice.setting.permission.index');
     }
 }
