@@ -25,7 +25,9 @@ export default function ForgotPassword({ status }: { status?: string }) {
             <Head title="Forgot password" />
 
             <div className="mx-auto flex h-full max-w-sm flex-col items-center justify-center gap-1">
-                <h1 className="mt-1 text-xl font-bold">Forgot your password?</h1>
+                <h1 className="mt-1 text-xl font-bold">
+                    Forgot your password?
+                </h1>
                 <p className="text-center text-sm text-muted-foreground">
                     Enter your email address and we will send you a link to
                     choose a new password.
@@ -37,7 +39,10 @@ export default function ForgotPassword({ status }: { status?: string }) {
                     </p>
                 )}
 
-                <form className="mt-2 flex w-full flex-col gap-4" onSubmit={onSubmit}>
+                <form
+                    className="mt-2 flex w-full flex-col gap-4"
+                    onSubmit={onSubmit}
+                >
                     <div className="flex flex-col">
                         <Label htmlFor="email" className="mb-1.5">
                             Email address
@@ -56,13 +61,18 @@ export default function ForgotPassword({ status }: { status?: string }) {
                     </div>
 
                     <Button type="submit" disabled={processing}>
-                        {processing && <LoaderCircle className="size-4 animate-spin" />}
+                        {processing && (
+                            <LoaderCircle className="size-4 animate-spin" />
+                        )}
                         Email password reset link
                     </Button>
 
                     <p className="text-center text-sm text-muted-foreground">
                         Remembered it?{' '}
-                        <a href={login.url()} className="underline underline-offset-4">
+                        <a
+                            href={login.url()}
+                            className="underline underline-offset-4"
+                        >
                             Back to sign in
                         </a>
                     </p>

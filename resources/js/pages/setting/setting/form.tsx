@@ -15,8 +15,9 @@ type Props = {
 };
 
 export default function SettingForm({ setting }: Props) {
-    const { data, setData, post, put, errors, processing } =
-        useForm(setting ?? { key: '', value: '' });
+    const { data, setData, post, put, errors, processing } = useForm(
+        setting ?? { key: '', value: '' },
+    );
 
     const onSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();

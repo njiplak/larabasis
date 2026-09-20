@@ -41,7 +41,9 @@ export default function TwoFactor({
                         <h2 className="text-base font-semibold">
                             Two-factor authentication
                         </h2>
-                        <Badge variant={twoFactorEnabled ? 'default' : 'secondary'}>
+                        <Badge
+                            variant={twoFactorEnabled ? 'default' : 'secondary'}
+                        >
                             {twoFactorEnabled ? 'Enabled' : 'Disabled'}
                         </Badge>
                     </div>
@@ -53,7 +55,10 @@ export default function TwoFactor({
 
                 {twoFactorEnabled ? (
                     <div className="space-y-4">
-                        <Form {...disable.form()} options={{ preserveScroll: true }}>
+                        <Form
+                            {...disable.form()}
+                            options={{ preserveScroll: true }}
+                        >
                             {({ processing }) => (
                                 <Button
                                     type="submit"

@@ -36,7 +36,13 @@ const columns: ColumnDef<Permission, any>[] = [
     createDateColumn<Permission>('created_at'),
 ];
 
-const routes = { fetch: fetchRoute, destroy: destroyRoute, destroyBulk, show, create };
+const routes = {
+    fetch: fetchRoute,
+    destroy: destroyRoute,
+    destroyBulk,
+    show,
+    create,
+};
 
 export default function PermissionIndex() {
     return (
@@ -51,4 +57,6 @@ export default function PermissionIndex() {
     );
 }
 
-PermissionIndex.layout = (page: React.ReactNode) => <AppLayout>{page}</AppLayout>;
+PermissionIndex.layout = (page: React.ReactNode) => (
+    <AppLayout>{page}</AppLayout>
+);

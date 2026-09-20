@@ -19,7 +19,11 @@ const EVENT_VARIANT: Record<string, 'default' | 'secondary' | 'destructive'> = {
 };
 
 const columns: ColumnDef<Activity, any>[] = [
-    helper.accessor('id', { id: 'id', header: 'ID', enableColumnFilter: false }),
+    helper.accessor('id', {
+        id: 'id',
+        header: 'ID',
+        enableColumnFilter: false,
+    }),
     helper.display({
         id: 'event',
         header: 'Event',
@@ -53,11 +57,14 @@ const columns: ColumnDef<Activity, any>[] = [
         enableColumnFilter: false,
         cell: (ctx) => {
             const causer = ctx.row.original.causer;
-            if (!causer) return <span className="text-muted-foreground">system</span>;
+            if (!causer)
+                return <span className="text-muted-foreground">system</span>;
             return (
                 <div className="flex flex-col">
                     <span>{causer.name}</span>
-                    <span className="text-xs text-muted-foreground">{causer.email}</span>
+                    <span className="text-xs text-muted-foreground">
+                        {causer.email}
+                    </span>
                 </div>
             );
         },

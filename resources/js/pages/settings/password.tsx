@@ -53,13 +53,17 @@ export default function Password({ status }: { status?: string }) {
 
                 <form onSubmit={onSubmit} className="space-y-4">
                     <div className="flex flex-col gap-1.5">
-                        <Label htmlFor="current_password">Current password</Label>
+                        <Label htmlFor="current_password">
+                            Current password
+                        </Label>
                         <PasswordInput
                             id="current_password"
                             ref={currentPasswordInput}
                             autoComplete="current-password"
                             value={data.current_password}
-                            onChange={(e) => setData('current_password', e.target.value)}
+                            onChange={(e) =>
+                                setData('current_password', e.target.value)
+                            }
                         />
                         <InputError message={errors?.current_password} />
                     </div>
@@ -71,29 +75,39 @@ export default function Password({ status }: { status?: string }) {
                             ref={passwordInput}
                             autoComplete="new-password"
                             value={data.password}
-                            onChange={(e) => setData('password', e.target.value)}
+                            onChange={(e) =>
+                                setData('password', e.target.value)
+                            }
                         />
                         <InputError message={errors?.password} />
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <Label htmlFor="password_confirmation">Confirm new password</Label>
+                        <Label htmlFor="password_confirmation">
+                            Confirm new password
+                        </Label>
                         <PasswordInput
                             id="password_confirmation"
                             autoComplete="new-password"
                             value={data.password_confirmation}
-                            onChange={(e) => setData('password_confirmation', e.target.value)}
+                            onChange={(e) =>
+                                setData('password_confirmation', e.target.value)
+                            }
                         />
                         <InputError message={errors?.password_confirmation} />
                     </div>
 
                     <div className="flex items-center gap-3">
                         <Button type="submit" disabled={processing}>
-                            {processing && <LoaderCircle className="size-4 animate-spin" />}
+                            {processing && (
+                                <LoaderCircle className="size-4 animate-spin" />
+                            )}
                             Save
                         </Button>
                         {status && (
-                            <p className="text-sm text-muted-foreground">{status}</p>
+                            <p className="text-sm text-muted-foreground">
+                                {status}
+                            </p>
                         )}
                     </div>
                 </form>

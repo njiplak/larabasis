@@ -30,7 +30,9 @@ export default function Profile({ status }: { status?: string }) {
 
             <section className="space-y-4">
                 <header>
-                    <h2 className="text-base font-semibold">Profile information</h2>
+                    <h2 className="text-base font-semibold">
+                        Profile information
+                    </h2>
                     <p className="text-sm text-muted-foreground">
                         Update your name and email address.
                     </p>
@@ -62,11 +64,15 @@ export default function Profile({ status }: { status?: string }) {
 
                     <div className="flex items-center gap-3">
                         <Button type="submit" disabled={processing}>
-                            {processing && <LoaderCircle className="size-4 animate-spin" />}
+                            {processing && (
+                                <LoaderCircle className="size-4 animate-spin" />
+                            )}
                             Save
                         </Button>
                         {status && (
-                            <p className="text-sm text-muted-foreground">{status}</p>
+                            <p className="text-sm text-muted-foreground">
+                                {status}
+                            </p>
                         )}
                     </div>
                 </form>

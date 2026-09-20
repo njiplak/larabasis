@@ -1,5 +1,9 @@
 import { Link } from '@inertiajs/react';
-import { createColumnHelper, type CellContext, type ColumnDef } from '@tanstack/react-table';
+import {
+    createColumnHelper,
+    type CellContext,
+    type ColumnDef,
+} from '@tanstack/react-table';
 import { Eye, Trash } from 'lucide-react';
 import { createElement } from 'react';
 
@@ -34,8 +38,17 @@ export function createActionColumn<T extends { id: number | string }>(options: {
             const detailItem = canUpdate
                 ? createElement(
                       Link,
-                      { key: 'detail', href: options.showRoute(original.id).url, method: 'get' } as any,
-                      createElement(DropdownMenuItem, null, createElement(Eye, null), ' Detail'),
+                      {
+                          key: 'detail',
+                          href: options.showRoute(original.id).url,
+                          method: 'get',
+                      } as any,
+                      createElement(
+                          DropdownMenuItem,
+                          null,
+                          createElement(Eye, null),
+                          ' Detail',
+                      ),
                   )
                 : null;
 
@@ -52,14 +65,26 @@ export function createActionColumn<T extends { id: number | string }>(options: {
                       },
                       createElement(Trash, { className: 'text-red-500' }),
                       ' ',
-                      createElement('span', { className: 'text-red-500' }, 'Delete'),
+                      createElement(
+                          'span',
+                          { className: 'text-red-500' },
+                          'Delete',
+                      ),
                   )
                 : null;
 
-            const items = [detailItem, options.extraItems?.(original), deleteItem].filter(Boolean);
+            const items = [
+                detailItem,
+                options.extraItems?.(original),
+                deleteItem,
+            ].filter(Boolean);
 
             if (items.length === 0) {
-                return createElement('span', { className: 'text-muted-foreground' }, '-');
+                return createElement(
+                    'span',
+                    { className: 'text-muted-foreground' },
+                    '-',
+                );
             }
 
             return createElement(
@@ -68,9 +93,17 @@ export function createActionColumn<T extends { id: number | string }>(options: {
                 createElement(
                     DropdownMenuTrigger,
                     { asChild: true },
-                    createElement(Button, { variant: 'outline', size: 'sm' }, 'Action'),
+                    createElement(
+                        Button,
+                        { variant: 'outline', size: 'sm' },
+                        'Action',
+                    ),
                 ),
-                createElement(DropdownMenuContent, { align: 'center' }, ...items),
+                createElement(
+                    DropdownMenuContent,
+                    { align: 'center' },
+                    ...items,
+                ),
             );
         },
     });

@@ -44,14 +44,19 @@ export default function TwoFactorChallenge() {
             <Head title="Two-factor authentication" />
 
             <div className="mx-auto flex h-full max-w-sm flex-col items-center justify-center gap-1">
-                <h1 className="mt-1 text-xl font-bold">Two-factor authentication</h1>
+                <h1 className="mt-1 text-xl font-bold">
+                    Two-factor authentication
+                </h1>
                 <p className="text-center text-sm text-muted-foreground">
                     {useRecoveryCode
                         ? 'Enter one of your recovery codes.'
                         : 'Enter the 6-digit code from your authenticator app.'}
                 </p>
 
-                <form className="mt-4 flex w-full flex-col gap-4" onSubmit={onSubmit}>
+                <form
+                    className="mt-4 flex w-full flex-col gap-4"
+                    onSubmit={onSubmit}
+                >
                     {useRecoveryCode ? (
                         <div className="flex flex-col">
                             <Label htmlFor="recovery_code" className="mb-1.5">
@@ -67,7 +72,10 @@ export default function TwoFactorChallenge() {
                                 }
                                 disabled={processing}
                             />
-                            <InputError message={errors?.recovery_code} className="mt-1" />
+                            <InputError
+                                message={errors?.recovery_code}
+                                className="mt-1"
+                            />
                         </div>
                     ) : (
                         <div className="flex flex-col items-center gap-2">
@@ -82,9 +90,15 @@ export default function TwoFactorChallenge() {
                                 autoFocus
                             >
                                 <InputOTPGroup>
-                                    {Array.from({ length: OTP_MAX_LENGTH }, (_, index) => (
-                                        <InputOTPSlot key={index} index={index} />
-                                    ))}
+                                    {Array.from(
+                                        { length: OTP_MAX_LENGTH },
+                                        (_, index) => (
+                                            <InputOTPSlot
+                                                key={index}
+                                                index={index}
+                                            />
+                                        ),
+                                    )}
                                 </InputOTPGroup>
                             </InputOTP>
                             <InputError message={errors?.code} />
@@ -92,7 +106,9 @@ export default function TwoFactorChallenge() {
                     )}
 
                     <Button type="submit" disabled={processing}>
-                        {processing && <LoaderCircle className="size-4 animate-spin" />}
+                        {processing && (
+                            <LoaderCircle className="size-4 animate-spin" />
+                        )}
                         Continue
                     </Button>
 

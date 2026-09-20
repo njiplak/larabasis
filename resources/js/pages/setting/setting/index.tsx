@@ -43,14 +43,22 @@ const columns: ColumnDef<Setting, any>[] = [
         enableColumnFilter: false,
         cell: (ctx) =>
             ctx.row.original.deleted_at ? (
-                <span className="text-xs font-medium text-destructive">Deleted</span>
+                <span className="text-xs font-medium text-destructive">
+                    Deleted
+                </span>
             ) : (
                 <span className="text-xs text-muted-foreground">Active</span>
             ),
     }),
 ];
 
-const routes = { fetch: fetchRoute, destroy: destroyRoute, destroyBulk, show, create };
+const routes = {
+    fetch: fetchRoute,
+    destroy: destroyRoute,
+    destroyBulk,
+    show,
+    create,
+};
 
 export default function SettingIndex() {
     return (
@@ -63,7 +71,9 @@ export default function SettingIndex() {
             routes={routes}
             filterComponent={<TrashedFilter />}
             actionExtras={(row) =>
-                row.deleted_at ? <RestoreAction url={restore(row.id).url} /> : null
+                row.deleted_at ? (
+                    <RestoreAction url={restore(row.id).url} />
+                ) : null
             }
         />
     );

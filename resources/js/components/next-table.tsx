@@ -754,7 +754,10 @@ function NextTable<T>({
                                 {Object.keys(rowSelection).length}
                             </Badge>
                             <span className="text-sm text-muted-foreground">
-                                <span className="hidden sm:inline">of {data.items?.length || 0} row(s) </span>selected
+                                <span className="hidden sm:inline">
+                                    of {data.items?.length || 0} row(s){' '}
+                                </span>
+                                selected
                             </span>
                         </div>
                         <div className="flex space-x-2">

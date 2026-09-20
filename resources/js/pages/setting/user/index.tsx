@@ -50,7 +50,7 @@ const columns: ColumnDef<UserWithRole, any>[] = [
             const role = ctx.row.original.roles?.[0];
             if (!role) return <span className="text-muted-foreground">-</span>;
             return (
-                <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-blue-700/10 ring-inset">
                     {role.name}
                 </span>
             );
@@ -63,14 +63,22 @@ const columns: ColumnDef<UserWithRole, any>[] = [
         enableColumnFilter: false,
         cell: (ctx) =>
             ctx.row.original.deleted_at ? (
-                <span className="text-xs font-medium text-destructive">Deleted</span>
+                <span className="text-xs font-medium text-destructive">
+                    Deleted
+                </span>
             ) : (
                 <span className="text-xs text-muted-foreground">Active</span>
             ),
     }),
 ];
 
-const routes = { fetch: fetchRoute, destroy: destroyRoute, destroyBulk, show, create };
+const routes = {
+    fetch: fetchRoute,
+    destroy: destroyRoute,
+    destroyBulk,
+    show,
+    create,
+};
 
 export default function UserIndex() {
     return (
@@ -83,7 +91,9 @@ export default function UserIndex() {
             routes={routes}
             filterComponent={<TrashedFilter />}
             actionExtras={(row) =>
-                row.deleted_at ? <RestoreAction url={restore(row.id).url} /> : null
+                row.deleted_at ? (
+                    <RestoreAction url={restore(row.id).url} />
+                ) : null
             }
         />
     );
