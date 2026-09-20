@@ -40,8 +40,10 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+                // getAllPermissions(), not getPermissionsViaRoles(): a
+                // permission granted directly to a user is still a permission.
                 'permissions' => $request->user()
-                    ? $request->user()->getPermissionsViaRoles()->pluck('name')->toArray()
+                    ? $request->user()->getAllPermissions()->pluck('name')->toArray()
                     : [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

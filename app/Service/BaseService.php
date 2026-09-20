@@ -8,6 +8,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -120,6 +121,7 @@ class BaseService implements BaseContract
             $model = $this->model->create($payloads);
 
             $this->syncMedia($model);
+            $this->recordActivity('created', $model);
 
             DB::commit();
 
@@ -172,9 +174,15 @@ class BaseService implements BaseContract
                     $query->where($this->guardForeignKey, $this->userID());
                 })
                 ->findOrFail($id);
+
+            $before = $model->attributesToArray();
             $model->update($payloads);
 
             $this->syncMedia($model);
+            $this->recordActivity('updated', $model, [
+                'old' => array_intersect_key($before, $model->getChanges()),
+                'attributes' => $this->loggableAttributes($model, array_keys($model->getChanges())),
+            ]);
             DB::commit();
 
             return $model->fresh();
@@ -199,12 +207,14 @@ class BaseService implements BaseContract
     {
         try {
             DB::beginTransaction();
-            $deleted = $this->model
+            $model = $this->model
                 ->when(! is_null($this->guardForeignKey), function ($query) {
                     $query->where($this->guardForeignKey, $this->userID());
                 })
-                ->findOrFail($id)
-                ->delete();
+                ->findOrFail($id);
+
+            $deleted = $model->delete();
+            $this->recordActivity('deleted', $model);
             DB::commit();
 
             return $deleted;
@@ -292,19 +302,21 @@ class BaseService implements BaseContract
         try {
             DB::beginTransaction();
 
-            $deleted = $this->model
+            $models = $this->model
                 ->when(! is_null($this->guardForeignKey), function ($query) {
                     $query->where($this->guardForeignKey, $this->userID());
                 })
                 ->whereIn('id', $ids)
-                ->get()
-                ->each
-                ->delete()
-                ->count();
+                ->get();
+
+            foreach ($models as $model) {
+                $model->delete();
+                $this->recordActivity('deleted', $model);
+            }
 
             DB::commit();
 
-            return $deleted;
+            return $models->count();
         } catch (Exception $e) {
             DB::rollBack();
 
@@ -337,6 +349,78 @@ class BaseService implements BaseContract
 
             return $e;
         }
+    }
+
+    /**
+     * Restore a soft-deleted record.
+     *
+     * @return bool|Exception
+     *
+     * @throws ModelNotFoundException
+     */
+    public function restore($id)
+    {
+        if (! $this->usesSoftDeletes()) {
+            return new Exception($this->model::class.' does not support restoring.');
+        }
+
+        try {
+            DB::beginTransaction();
+            $model = $this->model->newQuery()
+                ->onlyTrashed()
+                ->when(! is_null($this->guardForeignKey), function ($query) {
+                    $query->where($this->guardForeignKey, $this->userID());
+                })
+                ->findOrFail($id);
+
+            $restored = $model->restore();
+            $this->recordActivity('restored', $model);
+            DB::commit();
+
+            return $restored;
+        } catch (ModelNotFoundException $e) {
+            DB::rollBack();
+            throw $e;
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            return $e;
+        }
+    }
+
+    public function usesSoftDeletes(): bool
+    {
+        return in_array(SoftDeletes::class, class_uses_recursive($this->model::class), true);
+    }
+
+    /**
+     * Write one audit-log entry. Living here means every module built on this
+     * service is audited without touching the module.
+     */
+    protected function recordActivity(string $event, Model $model, array $properties = []): void
+    {
+        activity()
+            ->performedOn($model)
+            ->causedBy(Auth::guard($this->guard)->user())
+            ->withProperties($properties ?: ['attributes' => $this->loggableAttributes($model)])
+            ->event($event)
+            ->log($event);
+    }
+
+    /**
+     * Never log hidden attributes: password hashes and two-factor secrets
+     * must not be copied into the audit trail.
+     *
+     * @param  array<int, string>|null  $only
+     * @return array<string, mixed>
+     */
+    protected function loggableAttributes(Model $model, ?array $only = null): array
+    {
+        $attributes = $model->attributesToArray();
+
+        return is_null($only)
+            ? $attributes
+            : array_intersect_key($attributes, array_flip($only));
     }
 
     /**

@@ -25,6 +25,8 @@ interface BaseContract
 
     public function destroy($id);
 
+    public function restore($id);
+
     public function getWithCondition(
         $conditions,
         $allowedFilters,

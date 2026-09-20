@@ -1,6 +1,8 @@
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 
 import IndexPage from '@/components/index-page';
+import RestoreAction from '@/components/restore-action';
+import TrashedFilter from '@/components/trashed-filter';
 import AppLayout from '@/layouts/app-layout';
 import { createDateColumn } from '@/lib/column-helpers';
 import {
@@ -8,6 +10,7 @@ import {
     destroy as destroyRoute,
     destroyBulk,
     fetch as fetchRoute,
+    restore,
     show,
 } from '@/routes/backoffice/setting/user';
 import type { Role } from '@/types/role';
@@ -54,6 +57,17 @@ const columns: ColumnDef<UserWithRole, any>[] = [
         },
     }),
     createDateColumn<UserWithRole>('created_at'),
+    helper.display({
+        id: 'status',
+        header: 'Status',
+        enableColumnFilter: false,
+        cell: (ctx) =>
+            ctx.row.original.deleted_at ? (
+                <span className="text-xs font-medium text-destructive">Deleted</span>
+            ) : (
+                <span className="text-xs text-muted-foreground">Active</span>
+            ),
+    }),
 ];
 
 const routes = { fetch: fetchRoute, destroy: destroyRoute, destroyBulk, show, create };
@@ -65,7 +79,12 @@ export default function UserIndex() {
             description="Manage users and their role assignments"
             addLabel="Add User"
             columns={columns}
+            module="user"
             routes={routes}
+            filterComponent={<TrashedFilter />}
+            actionExtras={(row) =>
+                row.deleted_at ? <RestoreAction url={restore(row.id).url} /> : null
+            }
         />
     );
 }

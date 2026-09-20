@@ -53,6 +53,7 @@ export default function RoleIndex() {
             description="Manage user roles and their permissions"
             addLabel="Add Role"
             columns={columns}
+            module="role"
             routes={routes}
         />
     );

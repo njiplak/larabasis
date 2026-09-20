@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -28,5 +29,23 @@ class UserRequest extends FormRequest
             'password' => [$this->isMethod('POST') ? 'required' : 'nullable', 'string', 'min:8'],
             'role' => ['nullable', 'integer', 'exists:roles,id'],
         ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'email.unique' => $this->trashedUserHoldsEmail()
+                ? 'That email belongs to a deleted user. Restore that user, or use a different email.'
+                : 'That email address is already in use.',
+        ];
+    }
+
+    /**
+     * A soft-deleted user keeps their email reserved so two records can never
+     * claim the same identity; the message points at the restore path.
+     */
+    private function trashedUserHoldsEmail(): bool
+    {
+        return User::onlyTrashed()->where('email', $this->input('email'))->exists();
     }
 }

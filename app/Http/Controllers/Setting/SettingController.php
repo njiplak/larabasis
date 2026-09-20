@@ -34,6 +34,7 @@ class SettingController extends Controller
                     fn ($q) => $q->where('key', 'like', "%{$value}%")
                         ->orWhere('value', 'like', "%{$value}%")
                 )),
+                AllowedFilter::trashed(),
             ],
             allowedSorts: ['id', 'key', 'value', 'created_at', 'updated_at'],
             withPaginate: true,
@@ -72,6 +73,13 @@ class SettingController extends Controller
     public function destroy($id)
     {
         $data = $this->service->destroy($id);
+
+        return WebResponse::response($data, 'backoffice.setting.setting.index');
+    }
+
+    public function restore($id)
+    {
+        $data = $this->service->restore($id);
 
         return WebResponse::response($data, 'backoffice.setting.setting.index');
     }

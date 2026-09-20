@@ -39,6 +39,7 @@ class UserController extends Controller
                     'roles',
                     fn ($q) => $q->where('name', $value)
                 )),
+                AllowedFilter::trashed(),
             ],
             allowedSorts: ['id', 'name', 'email', 'created_at', 'updated_at'],
             withPaginate: true,
@@ -80,6 +81,13 @@ class UserController extends Controller
     public function destroy($id)
     {
         $data = $this->service->destroy($id);
+
+        return WebResponse::response($data, 'backoffice.setting.user.index');
+    }
+
+    public function restore($id)
+    {
+        $data = $this->service->restore($id);
 
         return WebResponse::response($data, 'backoffice.setting.user.index');
     }

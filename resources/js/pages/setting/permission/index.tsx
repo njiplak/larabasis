@@ -45,6 +45,7 @@ export default function PermissionIndex() {
             description="Manage application permissions"
             addLabel="Add Permission"
             columns={columns}
+            module="permission"
             routes={routes}
         />
     );

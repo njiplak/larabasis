@@ -15,6 +15,8 @@ export function createActionColumn<T extends { id: number | string }>(options: {
     showRoute: (id: number | string) => { url: string };
     setDeleteId: (id: any) => void;
     extraItems?: (row: T) => React.ReactNode;
+    canUpdate?: boolean;
+    canDelete?: boolean;
 }): ColumnDef<T, any> {
     const helper = createColumnHelper<T>();
 
@@ -26,6 +28,40 @@ export function createActionColumn<T extends { id: number | string }>(options: {
         cell: (ctx: CellContext<T, unknown>) => {
             const original = ctx.row.original;
 
+            const canUpdate = options.canUpdate ?? true;
+            const canDelete = options.canDelete ?? true;
+
+            const detailItem = canUpdate
+                ? createElement(
+                      Link,
+                      { key: 'detail', href: options.showRoute(original.id).url, method: 'get' } as any,
+                      createElement(DropdownMenuItem, null, createElement(Eye, null), ' Detail'),
+                  )
+                : null;
+
+            const deleteItem = canDelete
+                ? createElement(
+                      DropdownMenuItem,
+                      {
+                          key: 'delete',
+                          className: 'text-red-500 hover:text-red-500',
+                          onClick: (e: React.MouseEvent) => {
+                              e.preventDefault();
+                              options.setDeleteId(original.id);
+                          },
+                      },
+                      createElement(Trash, { className: 'text-red-500' }),
+                      ' ',
+                      createElement('span', { className: 'text-red-500' }, 'Delete'),
+                  )
+                : null;
+
+            const items = [detailItem, options.extraItems?.(original), deleteItem].filter(Boolean);
+
+            if (items.length === 0) {
+                return createElement('span', { className: 'text-muted-foreground' }, '-');
+            }
+
             return createElement(
                 DropdownMenu,
                 null,
@@ -34,29 +70,7 @@ export function createActionColumn<T extends { id: number | string }>(options: {
                     { asChild: true },
                     createElement(Button, { variant: 'outline', size: 'sm' }, 'Action'),
                 ),
-                createElement(
-                    DropdownMenuContent,
-                    { align: 'center' },
-                    createElement(
-                        Link,
-                        { href: options.showRoute(original.id).url, method: 'get' } as any,
-                        createElement(DropdownMenuItem, null, createElement(Eye, null), ' Detail'),
-                    ),
-                    options.extraItems?.(original),
-                    createElement(
-                        DropdownMenuItem,
-                        {
-                            className: 'text-red-500 hover:text-red-500',
-                            onClick: (e: React.MouseEvent) => {
-                                e.preventDefault();
-                                options.setDeleteId(original.id);
-                            },
-                        },
-                        createElement(Trash, { className: 'text-red-500' }),
-                        ' ',
-                        createElement('span', { className: 'text-red-500' }, 'Delete'),
-                    ),
-                ),
+                createElement(DropdownMenuContent, { align: 'center' }, ...items),
             );
         },
     });

@@ -1,9 +1,12 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     ChevronsUpDown,
+    KeyRound,
     LayoutDashboard,
     LogOut,
+    ScrollText,
     Settings,
+    ShieldCheck,
     UserCog,
     Users,
 } from 'lucide-react';
@@ -35,6 +38,7 @@ import {
     useSidebar,
 } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { usePermission } from '@/hooks/use-permission';
 import { logout } from '@/routes';
 import backoffice from '@/routes/backoffice';
 import { edit as editProfile } from '@/routes/profile';
@@ -139,10 +143,52 @@ export default function AppLayout({ children }: AppLayoutProps) {
     const page = usePage<SharedData>();
     const { sidebarOpen: isOpen } = page.props;
     const currentUrl = page.url;
+    const { can } = usePermission();
 
     function isMenuActive(href: string) {
         return currentUrl === href || currentUrl.startsWith(href + '/');
     }
+
+    // Mirrors the `permission:` middleware on each route: no link is shown
+    // that would only lead to a 403.
+    const menuItems = [
+        {
+            title: 'Dashboard',
+            href: backoffice.index.url(),
+            icon: LayoutDashboard,
+            visible: true,
+        },
+        {
+            title: 'Users',
+            href: backoffice.setting.user.index.url(),
+            icon: Users,
+            visible: can('user.view'),
+        },
+        {
+            title: 'Roles',
+            href: backoffice.setting.role.index.url(),
+            icon: ShieldCheck,
+            visible: can('role.view'),
+        },
+        {
+            title: 'Permissions',
+            href: backoffice.setting.permission.index.url(),
+            icon: KeyRound,
+            visible: can('permission.view'),
+        },
+        {
+            title: 'Settings',
+            href: backoffice.setting.setting.index.url(),
+            icon: Settings,
+            visible: can('setting.view'),
+        },
+        {
+            title: 'Activity Log',
+            href: backoffice.setting.activity.index.url(),
+            icon: ScrollText,
+            visible: can('activity.view'),
+        },
+    ].filter((item) => item.visible);
 
     return (
         <SidebarProvider defaultOpen={isOpen}>
@@ -163,30 +209,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
                         <SidebarGroupLabel>Menu</SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isMenuActive(backoffice.index.url())}>
-                                        <Link href={backoffice.index.url()}>
-                                            <LayoutDashboard />
-                                            <span>Dashboard</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isMenuActive(backoffice.setting.user.index.url())}>
-                                        <Link href={backoffice.setting.user.index.url()}>
-                                            <Users />
-                                            <span>Users</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isMenuActive(backoffice.setting.setting.index.url())}>
-                                        <Link href={backoffice.setting.setting.index.url()}>
-                                            <Settings />
-                                            <span>Settings</span>
-                                        </Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
+                                {menuItems.map((item) => (
+                                    <SidebarMenuItem key={item.href}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            isActive={isMenuActive(item.href)}
+                                        >
+                                            <Link href={item.href}>
+                                                <item.icon />
+                                                <span>{item.title}</span>
+                                            </Link>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                ))}
                             </SidebarMenu>
                         </SidebarGroupContent>
                     </SidebarGroup>
