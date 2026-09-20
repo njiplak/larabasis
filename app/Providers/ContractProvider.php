@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Contract\Auth\TwoFactorContract;
 use App\Contract\Auth\UserAuthContract;
 use App\Contract\AuthContract;
 use App\Contract\BaseContract;
@@ -9,6 +10,7 @@ use App\Contract\Setting\PermissionContract;
 use App\Contract\Setting\RoleContract;
 use App\Contract\Setting\SettingContract;
 use App\Contract\Setting\UserContract;
+use App\Service\Auth\TwoFactorService;
 use App\Service\Auth\UserAuthService;
 use App\Service\AuthService;
 use App\Service\BaseService;
@@ -25,6 +27,7 @@ class ContractProvider extends ServiceProvider
         BaseContract::class => BaseService::class,
         AuthContract::class => AuthService::class,
         UserAuthContract::class => UserAuthService::class,
+        TwoFactorContract::class => TwoFactorService::class,
 
         // Setting
         SettingContract::class => SettingService::class,

@@ -4,6 +4,7 @@ import {
     LayoutDashboard,
     LogOut,
     Settings,
+    UserCog,
     Users,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
@@ -36,6 +37,7 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 import { logout } from '@/routes';
 import backoffice from '@/routes/backoffice';
+import { edit as editProfile } from '@/routes/profile';
 import type { SharedData, AppLayoutProps } from '@/types';
 
 function getInitials(name: string) {
@@ -105,6 +107,16 @@ function SidebarUser() {
                                 </div>
                             </div>
                         </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                            <Link
+                                className="block w-full cursor-pointer"
+                                href={editProfile()}
+                            >
+                                <UserCog className="mr-2" />
+                                Account settings
+                            </Link>
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
                             <Link

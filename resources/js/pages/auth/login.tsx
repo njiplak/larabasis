@@ -1,4 +1,4 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
 import InputError from '@/components/input-error';
 import { PasswordInput } from '@/components/password-input';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
 import { FormResponse } from '@/lib/constant';
 import { attempt } from '@/routes';
+import { request as forgotPassword } from '@/routes/password';
 
 type FormData = {
     email: string;
@@ -64,7 +65,16 @@ export default function Login() {
                         <InputError message={errors.email} />
                     </div>
                     <div className="flex flex-col">
-                        <Label htmlFor="password">Password</Label>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="password">Password</Label>
+                            <Link
+                                href={forgotPassword.url()}
+                                className="text-xs text-muted-foreground underline underline-offset-4"
+                                tabIndex={4}
+                            >
+                                Forgot password?
+                            </Link>
+                        </div>
                         <PasswordInput
                             id="password"
                             required

@@ -3,11 +3,11 @@
 namespace App\Service;
 
 use App\Contract\AuthContract;
-use App\Exceptions\UserMessageException;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class AuthService implements AuthContract
 {
@@ -41,27 +41,30 @@ class AuthService implements AuthContract
     }
 
     /**
-     * Log a user in.
+     * Check credentials without starting a session.
      *
-     * A single failure message for every cause, so the response cannot be used
-     * to discover which email addresses are registered.
-     *
-     * @return true|UserMessageException
+     * One outcome for every failure, so the response cannot be used to
+     * discover which email addresses are registered.
      */
-    public function login(array $credentials)
+    public function verifyCredentials(array $credentials): ?Model
     {
-        $remember = (bool) ($credentials['remember'] ?? false);
+        $user = $this->model::query()
+            ->where($this->username, $credentials[$this->username])
+            ->first();
 
-        $attempt = [
-            $this->username => $credentials[$this->username],
-            'password' => $credentials['password'],
-        ];
-
-        if (! Auth::guard($this->guard)->attempt($attempt, $remember)) {
-            return new UserMessageException(__('auth.failed'));
+        if (! $user || ! Hash::check($credentials['password'], $user->getAuthPassword())) {
+            return null;
         }
 
-        return true;
+        return $user;
+    }
+
+    /**
+     * Start the session for an already-verified user.
+     */
+    public function loginUser(Model $user, bool $remember = false): void
+    {
+        Auth::guard($this->guard)->login($user, $remember);
     }
 
     /**
