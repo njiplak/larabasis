@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\CheckPermission;
+use App\Http\Middleware\EnsureTwoFactorIsAvailable;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Console\Scheduling\Schedule;
@@ -16,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function () {
             $loadRoutes = function ($directory, $middleware) {
-                if (!is_dir($directory)) {
+                if (! is_dir($directory)) {
                     return;
                 }
 
@@ -49,6 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'permission' => CheckPermission::class,
+            'two-factor' => EnsureTwoFactorIsAvailable::class,
         ]);
 
         $middleware->redirectGuestsTo('/auth/login');

@@ -9,13 +9,13 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
-
         $this->call([
+            RbacSeeder::class,
             SettingSeeder::class,
         ]);
+
+        if (config('service-contract.seeder_faker')) {
+            User::factory()->count(20)->create();
+        }
     }
 }

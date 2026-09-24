@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Setting;
 
 use App\Contract\Setting\RoleContract;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BulkDeleteRequest;
 use App\Http\Requests\RoleRequest;
 use App\Utils\WebResponse;
-use Illuminate\Support\Facades\Request;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
+use Spatie\QueryBuilder\AllowedFilter;
 
 class RoleController extends Controller
 {
@@ -27,11 +28,15 @@ class RoleController extends Controller
     public function fetch()
     {
         $data = $this->service->all(
-            allowedFilters: [],
-            allowedSorts: [],
+            allowedFilters: [
+                AllowedFilter::partial('name'),
+                AllowedFilter::callback('search', fn ($query, $value) => $query->where('name', 'like', "%{$value}%")),
+            ],
+            allowedSorts: ['id', 'name', 'created_at', 'updated_at'],
             withPaginate: true,
             perPage: request()->get('per_page', 10)
         );
+
         return response()->json($data);
     }
 
@@ -45,14 +50,14 @@ class RoleController extends Controller
     public function store(RoleRequest $request)
     {
         $data = $this->service->create($request->validated());
+
         return WebResponse::response($data, 'backoffice.setting.role.index');
     }
 
     public function show($id)
     {
-        $data = $this->service->find($id);
         return Inertia::render('setting/role/form', [
-            'role' => $data,
+            'role' => $this->service->find($id),
             'permissions' => $this->getGroupedPermissions(),
         ]);
     }
@@ -60,18 +65,21 @@ class RoleController extends Controller
     public function update(RoleRequest $request, $id)
     {
         $data = $this->service->update($id, $request->validated());
+
         return WebResponse::response($data, 'backoffice.setting.role.index');
     }
 
     public function destroy($id)
     {
         $data = $this->service->destroy($id);
+
         return WebResponse::response($data, 'backoffice.setting.role.index');
     }
 
-    public function destroy_bulk(Request $request)
+    public function destroy_bulk(BulkDeleteRequest $request)
     {
-        $data = $this->service->bulkDeleteByIds($request->ids ?? []);
+        $data = $this->service->bulkDeleteByIds($request->ids());
+
         return WebResponse::response($data, 'backoffice.setting.role.index');
     }
 

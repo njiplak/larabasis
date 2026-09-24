@@ -2,44 +2,65 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Contract\Auth\TwoFactorContract;
 use App\Contract\Auth\UserAuthContract;
+use App\Exceptions\UserMessageException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Utils\WebResponse;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class UserAuthController extends Controller
 {
+    public function __construct(
+        protected UserAuthContract $service,
+        protected TwoFactorContract $twoFactor,
+    ) {}
 
-    protected UserAuthContract $service;
-
-    public function __construct(UserAuthContract $service)
+    public function login(Request $request)
     {
-        $this->service = $service;
+        return Inertia::render('auth/login', [
+            'status' => $request->session()->get('status'),
+        ]);
     }
-
-    public function login()
-    {
-        if (Auth::guard('web')->check()) {
-            return redirect(route('backoffice.index'));
-        } else {
-            return Inertia::render('auth/login');
-        }
-    }
-
 
     public function attempt(LoginRequest $request)
     {
-        $payload = $request->validated();
-        $result = $this->service->login($payload);
+        $request->ensureIsNotRateLimited();
 
-        return WebResponse::response($result, 'backoffice.index');
+        $user = $this->service->verifyCredentials($request->validated());
+
+        if (is_null($user)) {
+            $request->hitRateLimiter();
+
+            return WebResponse::response(new UserMessageException(__('auth.failed')));
+        }
+
+        $request->clearRateLimiter();
+
+        // Credentials are correct but the session does not start yet: the
+        // second factor is still owed.
+        if ($this->twoFactor->isEnabled($user)) {
+            $request->session()->put('login.id', $user->getKey());
+            $request->session()->put('login.remember', $request->boolean('remember'));
+
+            return WebResponse::response(true, 'two-factor.login');
+        }
+
+        $this->service->loginUser($user, $request->boolean('remember'));
+        $request->session()->regenerate();
+
+        return WebResponse::response(true, 'backoffice.index');
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
         $result = $this->service->logout();
-        return WebResponse::response($result, 'auth.login');
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return WebResponse::response($result, 'login');
     }
 }

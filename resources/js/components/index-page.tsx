@@ -7,6 +7,7 @@ import { DeleteDialog } from '@/components/delete-dialog';
 import NextTable from '@/components/next-table';
 import { Button } from '@/components/ui/button';
 import { useCrudTable, type CrudRoutes } from '@/hooks/use-crud-table';
+import { usePermission } from '@/hooks/use-permission';
 import { createActionColumn } from '@/lib/column-helpers';
 
 export type IndexPageProps<T extends { id: number | string }> = {
@@ -22,6 +23,11 @@ export type IndexPageProps<T extends { id: number | string }> = {
     headerActions?: ReactNode;
     filterComponent?: ReactNode;
     tableProps?: Record<string, any>;
+    /**
+     * Module name, e.g. "user". When given, the Add button, the row actions
+     * and bulk delete follow the same permissions as the routes behind them.
+     */
+    module?: string;
 };
 
 export default function IndexPage<T extends { id: number | string }>({
@@ -37,9 +43,18 @@ export default function IndexPage<T extends { id: number | string }>({
     headerActions,
     filterComponent,
     tableProps,
+    module,
 }: IndexPageProps<T>) {
+    const { can } = usePermission();
     const { deleteId, setDeleteId, setSelected, onDelete, onBulkDelete, load } =
         useCrudTable<T>(routes);
+
+    const allow = (action: string) => !module || can(`${module}.${action}`);
+
+    // A soft-deleted row is invisible to find()/destroy(), so offering Detail
+    // or Delete on one only leads to a 404. Restore is the one action left.
+    const isTrashed = (row: T) =>
+        Boolean((row as { deleted_at?: unknown }).deleted_at);
 
     const allColumns: ColumnDef<T, any>[] = showActionColumn
         ? [
@@ -48,26 +63,40 @@ export default function IndexPage<T extends { id: number | string }>({
                   showRoute: (id) => routes.show(id),
                   setDeleteId,
                   extraItems: actionExtras,
+                  canUpdate: (row: T) => allow('update') && !isTrashed(row),
+                  canDelete: (row: T) => allow('delete') && !isTrashed(row),
               }),
           ]
         : columns;
 
     return (
         <>
-            <DeleteDialog id={deleteId} onDelete={onDelete} onOpenChange={setDeleteId} />
+            <DeleteDialog
+                id={deleteId}
+                onDelete={onDelete}
+                onOpenChange={setDeleteId}
+            />
 
             <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex flex-col">
                         <h1 className="text-xl font-semibold">{title}</h1>
-                        <p className="hidden text-sm text-gray-500 sm:block">{description}</p>
+                        <p className="hidden text-sm text-gray-500 sm:block">
+                            {description}
+                        </p>
                     </div>
                     <div className="flex gap-2">
                         {headerActions}
-                        {!hideAdd && (
-                            <Button onClick={() => router.visit(routes.create().url)}>
+                        {!hideAdd && allow('create') && (
+                            <Button
+                                onClick={() =>
+                                    router.visit(routes.create().url)
+                                }
+                            >
                                 <Plus className="size-4" />
-                                <span className="hidden sm:inline">{addLabel}</span>
+                                <span className="hidden sm:inline">
+                                    {addLabel}
+                                </span>
                             </Button>
                         )}
                     </div>
@@ -76,7 +105,7 @@ export default function IndexPage<T extends { id: number | string }>({
                     enableSelect={!disableSelect}
                     onSelect={(select) => setSelected(select as any[])}
                     load={load}
-                    onBulkDelete={onBulkDelete}
+                    onBulkDelete={allow('delete') ? onBulkDelete : undefined}
                     id={'id' as keyof T}
                     columns={allColumns}
                     mode="table"
