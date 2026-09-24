@@ -8,6 +8,7 @@ control, an audited CRUD scaffold and an admin console to build products on.
 | Area | What you get |
 | --- | --- |
 | Auth | Login with throttling, logout, forgot/reset password, optional TOTP two-factor with recovery codes |
+| Feature flags | `AUTH_TWO_FACTOR=false` drops two-factor from a project entirely |
 | Accounts | Self-service profile, password change, appearance |
 | RBAC | Roles, permissions, per-route `permission:` middleware, permission-aware navigation |
 | CRUD scaffold | Contract → Service → Controller with paging, search, sorting, bulk delete, soft delete and restore |
@@ -41,6 +42,19 @@ Then:
 ```bash
 composer dev     # server, queue worker, logs and vite together
 ```
+
+### Turning two-factor off
+
+Not every project wants it. Set `AUTH_TWO_FACTOR=false` and the two-factor
+screens 404, the settings tab disappears and nobody is challenged at login.
+
+Its routes stay registered even when it is off, because Wayfinder builds the
+front-end route helpers from the route table — removing them would break the
+build for pages that import them. A middleware makes them behave as though
+they do not exist.
+
+Users who already enrolled keep their secret: switching it off does not lock
+them out, and switching it back on demands their code again.
 
 Sign in at `/auth/login` and the console is at `/backoffice`.
 

@@ -6,6 +6,11 @@ use App\Models\User;
 
 interface TwoFactorContract
 {
+    /**
+     * Whether this project offers two-factor auth at all.
+     */
+    public function isAvailable(): bool;
+
     public function isEnabled(User $user): bool;
 
     public function isPending(User $user): bool;

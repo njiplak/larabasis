@@ -142,3 +142,14 @@ test('a user cannot read another users recovery codes', function () {
 
     expect(array_intersect($mine, $otherCodes))->toBeEmpty();
 });
+
+test('the feature is available by default', function () {
+    expect($this->service->isAvailable())->toBeTrue();
+});
+
+test('the settings tab is shown when the feature is on', function () {
+    $this->actingAs($this->user)
+        ->get(route('profile.edit'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('features.twoFactor', true));
+});

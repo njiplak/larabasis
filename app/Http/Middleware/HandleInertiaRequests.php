@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Contract\Auth\TwoFactorContract;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -45,6 +46,9 @@ class HandleInertiaRequests extends Middleware
                 'permissions' => $request->user()
                     ? $request->user()->getAllPermissions()->pluck('name')->toArray()
                     : [],
+            ],
+            'features' => [
+                'twoFactor' => app(TwoFactorContract::class)->isAvailable(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

@@ -16,7 +16,7 @@ Route::group(['middleware' => 'auth', 'prefix' => 'account'], function () {
     Route::get('appearance', [AppearanceController::class, 'edit'])->name('appearance.edit');
 });
 
-Route::group(['middleware' => 'auth', 'prefix' => 'account/two-factor', 'as' => 'two-factor.'], function () {
+Route::group(['middleware' => ['auth', 'two-factor'], 'prefix' => 'account/two-factor', 'as' => 'two-factor.'], function () {
     Route::get('/', [TwoFactorController::class, 'show'])->name('show');
     Route::post('/', [TwoFactorController::class, 'enable'])->name('enable');
     Route::delete('/', [TwoFactorController::class, 'disable'])->name('disable');

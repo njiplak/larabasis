@@ -20,9 +20,11 @@ Route::group(['prefix' => 'auth'], function () {
             ->middleware('throttle:6,1')
             ->name('password.store');
 
-        Route::get('two-factor-challenge', [TwoFactorChallengeController::class, 'show'])->name('two-factor.login');
+        Route::get('two-factor-challenge', [TwoFactorChallengeController::class, 'show'])
+            ->middleware('two-factor')
+            ->name('two-factor.login');
         Route::post('two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
-            ->middleware('throttle:6,1')
+            ->middleware(['two-factor', 'throttle:6,1'])
             ->name('two-factor.verify');
     });
 

@@ -18,13 +18,23 @@ class TwoFactorService implements TwoFactorContract
 
     public function __construct(private readonly Google2FA $engine) {}
 
+    public function isAvailable(): bool
+    {
+        return (bool) config('service-contract.auth.two_factor');
+    }
+
     /**
      * Confirmed: the user proved they can generate codes. Only a confirmed
      * secret is ever demanded at login.
+     *
+     * Returns false whenever the feature is switched off, so turning it off
+     * cannot lock out a user who had already enrolled.
      */
     public function isEnabled(User $user): bool
     {
-        return ! is_null($user->two_factor_secret) && ! is_null($user->two_factor_confirmed_at);
+        return $this->isAvailable()
+            && ! is_null($user->two_factor_secret)
+            && ! is_null($user->two_factor_confirmed_at);
     }
 
     /**
