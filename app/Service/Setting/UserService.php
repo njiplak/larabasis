@@ -2,6 +2,7 @@
 
 namespace App\Service\Setting;
 
+use App\Contract\Auth\TwoFactorContract;
 use App\Contract\Setting\UserContract;
 use App\Exceptions\UserMessageException;
 use App\Models\User;
@@ -16,9 +17,45 @@ class UserService extends BaseService implements UserContract
 {
     protected array $relation = ['roles'];
 
-    public function __construct(User $model)
+    public function __construct(User $model, protected TwoFactorContract $twoFactor)
     {
         parent::__construct($model);
+    }
+
+    /**
+     * Clear a user's two-factor enrolment.
+     *
+     * Their secret and recovery codes are destroyed, not suspended, so the
+     * only way back in is a fresh enrolment. Audited like any other change.
+     *
+     * @return bool|Exception
+     *
+     * @throws ModelNotFoundException
+     */
+    public function resetTwoFactor($id)
+    {
+        try {
+            DB::beginTransaction();
+            $user = $this->model->findOrFail($id);
+
+            $wasEnrolled = ! is_null($user->two_factor_secret);
+
+            $this->twoFactor->disable($user);
+            $this->recordActivity('two-factor-reset', $user, [
+                'was_enrolled' => $wasEnrolled,
+            ]);
+
+            DB::commit();
+
+            return true;
+        } catch (ModelNotFoundException $e) {
+            DB::rollBack();
+            throw $e;
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            return $e;
+        }
     }
 
     public function create($payloads)

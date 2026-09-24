@@ -126,3 +126,28 @@ test('users can be filtered by role', function () {
     expect($items)->toHaveCount(1);
     expect($items[0]['name'])->toBe('In Role');
 });
+
+test('the admin create form applies the same password rule as the users own change', function () {
+    // Password::defaults() is min(8) outside production; the point is that
+    // both paths resolve the same rule rather than the admin path being weaker.
+    $this->actingAs($this->actor)
+        ->post(route('backoffice.setting.user.store'), [
+            'name' => 'Too Short',
+            'email' => 'short@example.com',
+            'password' => 'short',
+        ])
+        ->assertSessionHasErrors('password');
+
+    expect(User::where('email', 'short@example.com')->exists())->toBeFalse();
+});
+
+test('the admin password rule is the configured default, not a hardcoded min', function () {
+    $rules = (new App\Http\Requests\UserRequest)->rules();
+    $selfService = (new App\Http\Requests\UpdatePasswordRequest)->rules();
+
+    $adminRule = collect($rules['password'])->first(fn ($r) => $r instanceof Illuminate\Validation\Rules\Password);
+    $ownRule = collect($selfService['password'])->first(fn ($r) => $r instanceof Illuminate\Validation\Rules\Password);
+
+    expect($adminRule)->not->toBeNull();
+    expect($adminRule == $ownRule)->toBeTrue();
+});

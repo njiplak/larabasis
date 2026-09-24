@@ -19,8 +19,8 @@ export function createActionColumn<T extends { id: number | string }>(options: {
     showRoute: (id: number | string) => { url: string };
     setDeleteId: (id: any) => void;
     extraItems?: (row: T) => React.ReactNode;
-    canUpdate?: boolean;
-    canDelete?: boolean;
+    canUpdate?: boolean | ((row: T) => boolean);
+    canDelete?: boolean | ((row: T) => boolean);
 }): ColumnDef<T, any> {
     const helper = createColumnHelper<T>();
 
@@ -32,8 +32,13 @@ export function createActionColumn<T extends { id: number | string }>(options: {
         cell: (ctx: CellContext<T, unknown>) => {
             const original = ctx.row.original;
 
-            const canUpdate = options.canUpdate ?? true;
-            const canDelete = options.canDelete ?? true;
+            const resolve = (
+                value: boolean | ((row: T) => boolean) | undefined,
+            ): boolean =>
+                typeof value === 'function' ? value(original) : (value ?? true);
+
+            const canUpdate = resolve(options.canUpdate);
+            const canDelete = resolve(options.canDelete);
 
             const detailItem = canUpdate
                 ? createElement(

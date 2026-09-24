@@ -42,6 +42,9 @@ Route::group(['middleware' => 'auth', 'prefix' => 'setting', 'as' => 'backoffice
         Route::delete('/{id}', [UserController::class, 'destroy'])->name('destroy')->middleware('permission:user.delete');
         Route::post('/destroy-bulk', [UserController::class, 'destroy_bulk'])->name('destroy-bulk')->middleware('permission:user.delete');
         Route::post('/{id}/restore', [UserController::class, 'restore'])->name('restore')->middleware('permission:user.delete');
+        Route::post('/{id}/reset-two-factor', [UserController::class, 'resetTwoFactor'])
+            ->name('reset-two-factor')
+            ->middleware(['permission:user.update', 'two-factor']);
     });
 
     Route::group(['prefix' => 'permission', 'as' => 'permission.'], function () {

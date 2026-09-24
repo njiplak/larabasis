@@ -189,3 +189,26 @@ test('an email in use by a live user gets the ordinary message', function () {
     expect($response->getSession()->get('errors')->first('email'))
         ->toBe('That email address is already in use.');
 });
+
+test('a soft-deleted row is not reachable through the actions the table offers', function (string $module) {
+    $actor = superAdmin();
+    $id = makeSoftDeletable($module, 'trashed-actions');
+    findTrashed($module, $id)->delete();
+
+    // Both of these 404, which is why IndexPage hides Detail and Delete on a
+    // trashed row and leaves only Restore.
+    $this->actingAs($actor)
+        ->get(route("backoffice.setting.{$module}.show", ['id' => $id]))
+        ->assertNotFound();
+
+    $this->actingAs($actor)
+        ->delete(route("backoffice.setting.{$module}.destroy", ['id' => $id]))
+        ->assertNotFound();
+
+    // Restore is the action that does work.
+    $this->actingAs($actor)
+        ->post(route("backoffice.setting.{$module}.restore", ['id' => $id]))
+        ->assertSessionHasNoErrors();
+
+    expect(findTrashed($module, $id)->trashed())->toBeFalse();
+})->with('softDeletable');

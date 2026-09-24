@@ -1,6 +1,8 @@
+import { usePage } from '@inertiajs/react';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 
 import IndexPage from '@/components/index-page';
+import ResetTwoFactorAction from '@/components/reset-two-factor-action';
 import RestoreAction from '@/components/restore-action';
 import TrashedFilter from '@/components/trashed-filter';
 import AppLayout from '@/layouts/app-layout';
@@ -10,11 +12,13 @@ import {
     destroy as destroyRoute,
     destroyBulk,
     fetch as fetchRoute,
+    resetTwoFactor,
     restore,
     show,
 } from '@/routes/backoffice/setting/user';
-import type { Role } from '@/types/role';
+import type { SharedData } from '@/types';
 import type { User } from '@/types/auth';
+import type { Role } from '@/types/role';
 
 type UserWithRole = User & {
     roles?: Role[];
@@ -58,6 +62,17 @@ const columns: ColumnDef<UserWithRole, any>[] = [
     }),
     createDateColumn<UserWithRole>('created_at'),
     helper.display({
+        id: 'two_factor',
+        header: '2FA',
+        enableColumnFilter: false,
+        cell: (ctx) =>
+            ctx.row.original.two_factor_enabled ? (
+                <span className="text-xs font-medium text-emerald-600">On</span>
+            ) : (
+                <span className="text-xs text-muted-foreground">Off</span>
+            ),
+    }),
+    helper.display({
         id: 'status',
         header: 'Status',
         enableColumnFilter: false,
@@ -81,6 +96,8 @@ const routes = {
 };
 
 export default function UserIndex() {
+    const { features } = usePage<SharedData>().props;
+
     return (
         <IndexPage<UserWithRole>
             title="User Management"

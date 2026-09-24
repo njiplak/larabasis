@@ -51,6 +51,11 @@ export default function IndexPage<T extends { id: number | string }>({
 
     const allow = (action: string) => !module || can(`${module}.${action}`);
 
+    // A soft-deleted row is invisible to find()/destroy(), so offering Detail
+    // or Delete on one only leads to a 404. Restore is the one action left.
+    const isTrashed = (row: T) =>
+        Boolean((row as { deleted_at?: unknown }).deleted_at);
+
     const allColumns: ColumnDef<T, any>[] = showActionColumn
         ? [
               ...columns,
@@ -58,8 +63,8 @@ export default function IndexPage<T extends { id: number | string }>({
                   showRoute: (id) => routes.show(id),
                   setDeleteId,
                   extraItems: actionExtras,
-                  canUpdate: allow('update'),
-                  canDelete: allow('delete'),
+                  canUpdate: (row: T) => allow('update') && !isTrashed(row),
+                  canDelete: (row: T) => allow('delete') && !isTrashed(row),
               }),
           ]
         : columns;

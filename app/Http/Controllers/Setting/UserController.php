@@ -85,6 +85,13 @@ class UserController extends Controller
         return WebResponse::response($data, 'backoffice.setting.user.index');
     }
 
+    public function resetTwoFactor($id)
+    {
+        $data = $this->service->resetTwoFactor($id);
+
+        return WebResponse::response($data, 'backoffice.setting.user.index');
+    }
+
     public function restore($id)
     {
         $data = $this->service->restore($id);
