@@ -46,7 +46,7 @@ Sign in at `/auth/login` and the console is at `/backoffice`.
 
 ## Checks
 
-These are what CI runs; run them before pushing.
+Run these before pushing.
 
 ```bash
 composer test          # pint --test + the full Pest suite
