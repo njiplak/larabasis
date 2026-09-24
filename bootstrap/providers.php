@@ -1,6 +1,9 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\ContractProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\ContractProvider::class,
+    AppServiceProvider::class,
+    ContractProvider::class,
 ];

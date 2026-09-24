@@ -5,7 +5,7 @@ use App\Utils\WebResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
-function respondWith(\Throwable $e): string
+function respondWith(Throwable $e): string
 {
     Route::post('/__test/web-response', fn () => WebResponse::response($e))->middleware('web');
 

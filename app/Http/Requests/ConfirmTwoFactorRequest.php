@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\ValidationException;
 
 class ConfirmTwoFactorRequest extends FormRequest
 {
@@ -21,9 +23,9 @@ class ConfirmTwoFactorRequest extends FormRequest
     /**
      * Keep failures in the bag the setup modal reads.
      */
-    protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator): void
+    protected function failedValidation(Validator $validator): void
     {
-        throw (new \Illuminate\Validation\ValidationException($validator))
+        throw (new ValidationException($validator))
             ->errorBag('confirmTwoFactorAuthentication');
     }
 }

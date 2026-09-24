@@ -3,6 +3,9 @@
 use App\Models\Setting;
 use App\Models\User;
 use Spatie\Activitylog\Models\Activity;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Symfony\Component\Routing\Exception\RouteNotFoundException;
 
 beforeEach(function () {
     $this->actor = superAdmin();
@@ -103,14 +106,14 @@ test('the activity feed can be filtered by event', function () {
 
 test('the activity log is read only: no write routes exist', function () {
     expect(fn () => route('backoffice.setting.activity.store'))
-        ->toThrow(Symfony\Component\Routing\Exception\RouteNotFoundException::class);
+        ->toThrow(RouteNotFoundException::class);
     expect(fn () => route('backoffice.setting.activity.destroy', ['id' => 1]))
-        ->toThrow(Symfony\Component\Routing\Exception\RouteNotFoundException::class);
+        ->toThrow(RouteNotFoundException::class);
 });
 
 test('every service that overrides create or update still audits', function () {
-    $role = Spatie\Permission\Models\Role::create(['name' => 'audited-role', 'guard_name' => 'web']);
-    $permission = Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'setting.view', 'guard_name' => 'web']);
+    $role = Role::create(['name' => 'audited-role', 'guard_name' => 'web']);
+    $permission = Permission::firstOrCreate(['name' => 'setting.view', 'guard_name' => 'web']);
     $user = User::factory()->create();
 
     $this->actingAs($this->actor)->post(route('backoffice.setting.user.store'), [
@@ -128,14 +131,14 @@ test('every service that overrides create or update still audits', function () {
 
     expect(Activity::where('subject_type', User::class)->where('event', 'created')->exists())->toBeTrue();
     expect(Activity::where('subject_type', User::class)->where('event', 'updated')->exists())->toBeTrue();
-    expect(Activity::where('subject_type', Spatie\Permission\Models\Role::class)->where('event', 'created')->exists())->toBeTrue();
-    expect(Activity::where('subject_type', Spatie\Permission\Models\Role::class)->where('event', 'updated')->exists())->toBeTrue();
+    expect(Activity::where('subject_type', Role::class)->where('event', 'created')->exists())->toBeTrue();
+    expect(Activity::where('subject_type', Role::class)->where('event', 'updated')->exists())->toBeTrue();
 });
 
 test('a role permission change records the permission set before and after', function () {
-    $view = Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'setting.view', 'guard_name' => 'web']);
-    $create = Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'setting.create', 'guard_name' => 'web']);
-    $role = Spatie\Permission\Models\Role::create(['name' => 'escalating', 'guard_name' => 'web']);
+    $view = Permission::firstOrCreate(['name' => 'setting.view', 'guard_name' => 'web']);
+    $create = Permission::firstOrCreate(['name' => 'setting.create', 'guard_name' => 'web']);
+    $role = Role::create(['name' => 'escalating', 'guard_name' => 'web']);
     $role->syncPermissions([$view]);
 
     $this->actingAs($this->actor)->put(route('backoffice.setting.role.update', ['id' => $role->id]), [
@@ -143,7 +146,7 @@ test('a role permission change records the permission set before and after', fun
         'permissions' => [$view->id, $create->id],
     ]);
 
-    $activity = Activity::where('subject_type', Spatie\Permission\Models\Role::class)
+    $activity = Activity::where('subject_type', Role::class)
         ->where('event', 'updated')->latest('id')->firstOrFail();
 
     expect($activity->properties['old']['permissions'])->toBe(['setting.view']);

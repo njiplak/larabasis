@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Requests\UpdatePasswordRequest;
+use App\Http\Requests\UserRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
@@ -142,11 +145,11 @@ test('the admin create form applies the same password rule as the users own chan
 });
 
 test('the admin password rule is the configured default, not a hardcoded min', function () {
-    $rules = (new App\Http\Requests\UserRequest)->rules();
-    $selfService = (new App\Http\Requests\UpdatePasswordRequest)->rules();
+    $rules = (new UserRequest)->rules();
+    $selfService = (new UpdatePasswordRequest)->rules();
 
-    $adminRule = collect($rules['password'])->first(fn ($r) => $r instanceof Illuminate\Validation\Rules\Password);
-    $ownRule = collect($selfService['password'])->first(fn ($r) => $r instanceof Illuminate\Validation\Rules\Password);
+    $adminRule = collect($rules['password'])->first(fn ($r) => $r instanceof Password);
+    $ownRule = collect($selfService['password'])->first(fn ($r) => $r instanceof Password);
 
     expect($adminRule)->not->toBeNull();
     expect($adminRule == $ownRule)->toBeTrue();

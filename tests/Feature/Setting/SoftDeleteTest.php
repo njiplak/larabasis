@@ -1,7 +1,9 @@
 <?php
 
+use App\Contract\Setting\UserContract;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Spatie\Activitylog\Models\Activity;
 
 dataset('softDeletable', [
@@ -110,13 +112,13 @@ test('restore needs the delete permission', function (string $module) {
 test('a soft-deleted user can no longer log in', function () {
     $user = User::factory()->create([
         'email' => 'gone@example.com',
-        'password' => Illuminate\Support\Facades\Hash::make('still-the-password'),
+        'password' => Hash::make('still-the-password'),
     ]);
 
     // Deleted through the service, not the HTTP route: acting as an admin
     // would leave that admin authenticated and the guest middleware would
     // short-circuit the login attempt under test.
-    app(App\Contract\Setting\UserContract::class)->destroy($user->id);
+    app(UserContract::class)->destroy($user->id);
 
     $this->post(route('attempt'), [
         'email' => 'gone@example.com',
@@ -129,7 +131,7 @@ test('a soft-deleted user can no longer log in', function () {
 test('an existing session stops working once the user is soft-deleted', function () {
     $user = User::factory()->create([
         'email' => 'session@example.com',
-        'password' => Illuminate\Support\Facades\Hash::make('still-the-password'),
+        'password' => Hash::make('still-the-password'),
     ]);
 
     // A real login, not actingAs(): actingAs pins the user on the guard for
