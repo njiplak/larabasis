@@ -162,10 +162,3 @@ No repro, no proof, no "fixed".
 - If you need to write a long explanation as a file, put it in `docs/`.
   Remember rule 1: what you write there is not evidence for the next
   session.
-
----
-
-## 9. Tools
-
-- For file search and grep in the current git-indexed directory, use
-  `fff`.
