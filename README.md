@@ -1,6 +1,6 @@
 # Kawakib — Basis
 
-A Laravel 12 + Inertia/React starter kit: authentication, role-based access
+A Laravel 13 + Inertia 3/React starter kit: authentication, role-based access
 control, an audited CRUD scaffold and an admin console to build products on.
 
 ## What is in the box
