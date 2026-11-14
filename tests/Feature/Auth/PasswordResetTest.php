@@ -141,3 +141,19 @@ test('an authenticated user is redirected away from the reset screens', function
         ->get(route('password.request'))
         ->assertRedirect(route('backoffice.index'));
 });
+
+test('asking for reset links does not use up the attempts for setting the new password', function () {
+    Notification::fake();
+
+    foreach (range(1, 6) as $ignored) {
+        $this->post(route('password.email'), ['email' => 'forgetful@example.com']);
+    }
+    $this->post(route('password.email'), ['email' => 'forgetful@example.com'])->assertTooManyRequests();
+
+    $this->post(route('password.store'), [
+        'token' => 'not-a-real-token',
+        'email' => 'forgetful@example.com',
+        'password' => 'a-brand-new-password',
+        'password_confirmation' => 'a-brand-new-password',
+    ])->assertRedirect();
+});

@@ -11,20 +11,21 @@ Route::group(['prefix' => 'auth'], function () {
         Route::post('login', [UserAuthController::class, 'attempt'])->name('attempt');
 
         Route::get('forgot-password', [PasswordResetController::class, 'request'])->name('password.request');
+        // Each throttle names its own key: without one, these routes share a single counter per IP.
         Route::post('forgot-password', [PasswordResetController::class, 'send'])
-            ->middleware('throttle:6,1')
+            ->middleware('throttle:6,1,staff-forgot-password')
             ->name('password.email');
 
         Route::get('reset-password/{token}', [PasswordResetController::class, 'reset'])->name('password.reset');
         Route::post('reset-password', [PasswordResetController::class, 'store'])
-            ->middleware('throttle:6,1')
+            ->middleware('throttle:6,1,staff-reset-password')
             ->name('password.store');
 
         Route::get('two-factor-challenge', [TwoFactorChallengeController::class, 'show'])
             ->middleware('two-factor')
             ->name('two-factor.login');
         Route::post('two-factor-challenge', [TwoFactorChallengeController::class, 'store'])
-            ->middleware(['two-factor', 'throttle:6,1'])
+            ->middleware(['two-factor', 'throttle:6,1,staff-two-factor'])
             ->name('two-factor.verify');
     });
 
